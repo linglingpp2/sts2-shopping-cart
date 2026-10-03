@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <CartDll Condition="'$(CartDll)' == ''">../../ShoppingCartMod/bin/Release/ShoppingCart.dll</CartDll>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="sts2"><HintPath>$(GameDataDir)/sts2.dll</HintPath></Reference>
+    <Reference Include="GodotSharp"><HintPath>$(GameDataDir)/GodotSharp.dll</HintPath></Reference>
+    <Reference Include="0Harmony"><HintPath>$(GameDataDir)/0Harmony.dll</HintPath></Reference>
+    <Reference Include="ShoppingCart"><HintPath>$(CartDll)</HintPath></Reference>
+    <AssemblyMetadata Include="GameDataDir" Value="$(GameDataDir)" />
+  </ItemGroup>
+
+  <Target Name="ValidateCartAssembly" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(CartDll)')"
+           Text="ShoppingCart.dll not found: $(CartDll). Run build.ps1 -SkipInstall or build.sh --no-install first, or use test.ps1/test.sh." />
+  </Target>
+</Project>

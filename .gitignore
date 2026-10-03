@@ -1,0 +1,39 @@
+# Build outputs and IDE state
+**/bin/
+**/obj/
+.vs/
+.idea/
+*.user
+*.suo
+
+# Local SDKs, tools, game files, and development backups
+dotnet/
+tools/
+decompiled/
+backups/
+data_sts2_*/
+AutoSlayUnlock/
+*.dll
+*.exe
+*.pck
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+
+# Release packages and temporary files
+dist/
+*.zip
+*.log
+*.tmp
+*.bak
+*.local.*
+mod_id.txt
+workshop-workspace/
+
+# Credentials and operating-system files
+.env
+.env.*
+*.pem
+*.key
+Thumbs.db
+.DS_Store

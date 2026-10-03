@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">$(STS2_GAME_DIR)</GameDir>
+    <GameDataDir Condition="'$(GameDataDir)' == ''">$(STS2_GAME_DATA_DIR)</GameDataDir>
+    <GameDataDir Condition="'$(GameDataDir)' == '' and '$(GameDir)' != ''">$(GameDir)/data_sts2_windows_x86_64</GameDataDir>
+  </PropertyGroup>
+
+  <Target Name="ValidateGameReferences" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="'$(GameDataDir)' == ''"
+           Text="Specify -p:GameDir=&quot;path to Slay the Spire 2&quot;, set STS2_GAME_DIR, or provide -p:GameDataDir=&quot;path to the game's managed DLLs&quot;. Game dependencies are not included in this repository." />
+    <Error Condition="'$(GameDataDir)' != '' and !Exists('$(GameDataDir)/sts2.dll')"
+           Text="Game assembly not found: $(GameDataDir)/sts2.dll. Check GameDir or GameDataDir." />
+    <Error Condition="'$(GameDataDir)' != '' and !Exists('$(GameDataDir)/GodotSharp.dll')"
+           Text="Game assembly not found: $(GameDataDir)/GodotSharp.dll. Check GameDataDir." />
+    <Error Condition="'$(GameDataDir)' != '' and !Exists('$(GameDataDir)/0Harmony.dll')"
+           Text="Game assembly not found: $(GameDataDir)/0Harmony.dll. Check GameDataDir." />
+  </Target>
+</Project>

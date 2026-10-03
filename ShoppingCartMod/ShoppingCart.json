@@ -1,0 +1,12 @@
+{
+  "id": "ShoppingCart",
+  "name": "Shop Shopping Cart 购物车",
+  "author": "lin",
+  "description": "In shops, click items to put them into a cart, then check out everything at once. 商店内先点击商品加入购物车，最后一键结算，免去逐件计算金币。",
+  "version": "1.0.3",
+  "has_pck": false,
+  "has_dll": true,
+  "dependencies": [],
+  "affects_gameplay": false,
+  "min_game_version": "0.111.0"
+}
