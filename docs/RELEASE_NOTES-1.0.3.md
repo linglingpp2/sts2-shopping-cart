@@ -11,13 +11,15 @@
 
 ## 安装
 
+也可通过 [Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991) 订阅，等待下载后重新启动游戏。当前工坊版本面向 `public-beta` 分支。使用订阅版前，请将相同 ID 的手动版移出游戏 `mods` 目录。
+
 下载并解压 `ShoppingCart-1.0.3.zip`。退出游戏后，将包中的 `ShoppingCart` 文件夹复制到 `<游戏目录>/mods/`，然后重新启动游戏。更新时覆盖同名 DLL 和清单。
 
 安装目录应包含 `mods/ShoppingCart/ShoppingCart.dll` 和 `mods/ShoppingCart/ShoppingCart.json`。无需 PCK 或 BaseLib。
 
 ## 验证范围
 
-在 Windows、游戏 0.111.0 下完成编译与 50 项自动回归；右侧面板经过独立引擎界面验证。自动测试替换了界面和部分同步边界，完整游玩、真实手柄及多人联机仍待实测，其他平台和游戏版本尚未验证。
+在 Windows、`public-beta` 分支、游戏 0.111.0 下完成编译；实际从 Steam 下载的 DLL 已通过 50 项独立回归，右侧面板经过独立引擎界面验证。自动测试替换了界面和部分同步边界，完整游玩、真实手柄及多人联机仍待实测，其他平台、分支和游戏版本尚未验证。
 
 购物车金额为预估，最终价格和效果由原版购买流程决定。购买失败会停止后续购买，已购买内容不退款。
 
@@ -29,6 +31,8 @@ An already selected, initially affordable Membership Card is purchased first. Al
 
 Exit the game, extract the ZIP, and copy its `ShoppingCart` folder into the game's `mods` folder. Restart after installing or updating. No PCK file or BaseLib is required.
 
-Builds and 50 automated regression checks passed on Windows with game 0.111.0, with a separate engine UI check. These checks replace UI and some synchronization boundaries; full gameplay, physical controllers, multiplayer, other game versions, and other platforms remain unverified.
+Alternatively, [subscribe on Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991), wait for the download, and restart. The current Workshop release targets `public-beta`. Move the same-ID manual copy outside the game's `mods` folder before using the subscription.
+
+Built on Windows with game 0.111.0 on `public-beta`. The actual Steam-downloaded DLL passed 50 isolated regression checks and a separate engine UI check. These checks replace UI and some synchronization boundaries; full gameplay, physical controllers, multiplayer, other game branches and versions, and other platforms remain unverified.
 
 MIT License, copyright (c) 2026 lin. [Source and documentation](https://github.com/linglingpp2/sts2-shopping-cart).

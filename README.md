@@ -4,7 +4,7 @@ Slay the Spire 2 的购物车 mod：先挑选商店商品，再一次结算，�
 
 A shopping-cart mod for Slay the Spire 2. Select your purchases first, review the estimated cost, then check out together. [English README](README.en.md)
 
-**当前版本：1.0.3。** [下载发行包](https://github.com/linglingpp2/sts2-shopping-cart/releases/latest) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/linglingpp2/sts2-shopping-cart/issues)
+**当前版本：1.0.3。** [创意工坊订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991) · [下载发行包](https://github.com/linglingpp2/sts2-shopping-cart/releases/latest) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/linglingpp2/sts2-shopping-cart/issues)
 
 ## 功能与操作
 
@@ -22,6 +22,10 @@ A shopping-cart mod for Slay the Spire 2. Select your purchases first, review th
 
 ## 安装与更新
 
+通过 [Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991) 订阅，等待 Steam 完成下载后重新启动游戏。当前工坊版本面向游戏的 `public-beta` 分支。
+
+手动安装步骤：
+
 1. 下载 `ShoppingCart-1.0.3.zip`，解压。
 2. 退出游戏，将包里的整个 `ShoppingCart` 文件夹复制到游戏目录的 `mods` 文件夹。更新时覆盖同名文件。
 3. 启动游戏，打开商店商品列表查看右侧购物车面板。更新 DLL 后需要重新启动游戏。
@@ -36,13 +40,13 @@ A shopping-cart mod for Slay the Spire 2. Select your purchases first, review th
 
 透明购物车图标已嵌入 DLL；无需额外 PCK 文件，也无需安装 BaseLib。发行包中的 `LICENSE` 与 `README.txt` 用于说明和许可，不需要放入游戏目录。
 
-当前还未发布创意工坊条目。以后测试订阅版时，请先将相同 ID 的手动安装版移出游戏 `mods` 目录，确保实际测试的是订阅版本。
+测试订阅版时，请先将相同 ID 的手动安装版移出游戏 `mods` 目录，确保实际测试的是订阅版本。
 
 ## 兼容性与验证范围
 
-- 当前构建及验证使用 **Windows、游戏版本 0.111.0**；清单最低游戏版本为 0.111.0。
-- 50 项自动回归覆盖购买顺序、会员卡折扣、返金、删牌确认和取消、购买失败、并发保护、异常恢复及商店关闭。测试使用真实游戏程序集，但替换了界面和部分同步边界，不等同于真实游戏流程测试。
-- 右侧面板还通过了独立引擎界面验证。完整游玩、真实手柄设备及多人联机仍待实测；其他操作系统和游戏版本尚未验证。
+- 当前构建及验证使用 **Windows、`public-beta` 分支、游戏版本 0.111.0**；清单最低游戏版本为 0.111.0，工坊分支范围为 `public-beta` 至 `public-beta`。
+- 本次发布实际从 Steam 下载的 DLL 已通过 50 项独立回归，覆盖购买顺序、会员卡折扣、返金、删牌确认和取消、购买失败、并发保护、异常恢复及商店关闭。测试使用真实游戏程序集，但替换了界面和部分同步边界，不等同于真实游戏流程测试。
+- 下载版 DLL 的右侧面板还通过了独立引擎界面 fixture 验证。完整游玩、真实手柄设备及多人联机仍待实测；其他操作系统、分支和游戏版本尚未验证。
 
 游戏更新可能改变内部购买或界面接口。反馈问题时，请附上游戏版本、mod 版本、其他已启用 mod、复现步骤和相关日志。[提交 Issue](https://github.com/linglingpp2/sts2-shopping-cart/issues)
 
