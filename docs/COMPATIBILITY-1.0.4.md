@@ -17,6 +17,10 @@ The UI fixtures use each version's engine, assemblies, and font resources in a s
 
 Full gameplay, physical controllers, actual remote multiplayer peers, other platforms, and other game versions remain unverified. A simulated transport check is not a live multiplayer session.
 
+## Workshop distribution
+
+Stable and beta use explicit snapshots under the existing Workshop item: `public`–`public` and `public-beta`–`public-beta`. The DLL and manifest are identical; only the installation note's distribution suffix differs. A broad mixed branch range left Steam selecting the older beta snapshot, so it was replaced for distribution purposes by exact branch snapshots. The current beta subscription's complete downloaded payload was checked against its upload workspace. Historical snapshots may remain listed by Steam.
+
 ## Reproduce checkout checks
 
 Run `test.ps1` or `test.sh` with `GameDataDir` pointing to legally installed references for the desired version. The harness detects the purchase API and compiles the corresponding fixture. These scripts do not install the mod or start the game. For a cross-version binary check, build the mod once against stable, then build the harness for each reference directory with `-p:CartDll` pointing to that same DLL, and set `STS2_GAME_DATA_DIR` for each execution.
