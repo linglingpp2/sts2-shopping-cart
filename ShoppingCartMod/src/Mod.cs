@@ -21,6 +21,6 @@ public static class Mod
 
         var harmony = new Harmony(Id);
         harmony.PatchAll(Assembly.GetExecutingAssembly());
-        Log.Info($"[{Id}] loaded, patched methods: {harmony.GetPatchedMethods().Count()}");
+        Log.Info($"[{Id}] loaded, patched methods: {harmony.GetPatchedMethods().Count()}, purchase API: {(MerchantPurchase.UsesMerchantSynchronizer ? "MerchantSynchronizer" : "legacy wrappers")}");
     }
 }

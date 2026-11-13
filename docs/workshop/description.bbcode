@@ -13,9 +13,9 @@ Select purchases first, review the estimated cost, then check out together.
 
 [h2]安装与兼容性[/h2]
 订阅后等待 Steam 下载，重新启动游戏。无需 BaseLib，也无需额外 PCK。
-当前版本 1.0.3；构建和验证环境为 Windows、public-beta 分支、游戏 0.111.0。
+当前版本 1.0.4；Windows 稳定版 public v0.107.1 与测试版 public-beta v0.113.0 共用同一个 DLL，自动选择原版购买入口。
 订阅版和手动版请保留一种；相同 ID 和版本的手动安装版可能使游戏跳过工坊版。
-50 项独立回归和引擎界面检查通过；测试替换了部分界面与同步边界。完整游玩、真实手柄和多人联机仍待实测，其他平台与游戏版本尚未验证。
+稳定版 51/51、测试版 56/56 项检查及两版独立引擎界面检查通过；测试替换了界面和网络传输等边界。完整游玩、真实手柄和真实多人联机仍待实测，其他平台与游戏版本尚未验证。
 
 [h2]English[/h2]
 [list]
@@ -26,12 +26,12 @@ Select purchases first, review the estimated cost, then check out together.
 [*]Switch to immediate-buy mode from the panel. Checkout uses the game's purchase flow and stops at a failed purchase; estimates may vary with relics or other mods.
 [/list]
 Subscribe, wait for Steam to download, and restart the game. No BaseLib or PCK required.
-Version 1.0.3, built and checked on Windows with game 0.111.0 on public-beta. Keep either the Workshop copy or the same-ID manual copy for testing.
-50 isolated regression checks and a separate engine UI check passed. Full gameplay, physical controllers, multiplayer, other game versions and platforms remain unverified.
+Version 1.0.4 supports Windows stable/public v0.107.1 and public-beta v0.113.0 with one DLL, selecting the native purchase API at runtime. Keep either the Workshop copy or the same-ID manual copy.
+51/51 stable and 56/56 beta checks, plus separate engine UI fixtures on both, passed. Tests replace UI and transport boundaries. Full gameplay, physical controllers, real multiplayer peers, other versions and platforms remain unverified.
 
 [h2]源码与反馈 / Source and support[/h2]
 [url=https://github.com/linglingpp2/sts2-shopping-cart]GitHub · MIT 开源[/url]
 [url=https://github.com/linglingpp2/sts2-shopping-cart/issues]问题反馈 / Report an issue[/url]
-[url=https://github.com/linglingpp2/sts2-shopping-cart/releases/tag/v1.0.3]手动安装包 / Manual download[/url]
+[url=https://github.com/linglingpp2/sts2-shopping-cart/releases/tag/v1.0.4]手动安装包 / Manual download[/url]
 原创 mod 与内嵌购物车图标采用 MIT；游戏及其组件仍归各自所有者。本项目为非官方 mod。
 Original mod code and embedded cart icon: MIT, Copyright (c) 2026 lin. Unofficial mod.

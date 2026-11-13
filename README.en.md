@@ -2,7 +2,7 @@
 
 A shopping-cart mod for Slay the Spire 2: choose shop items first, review the estimated cost and remaining gold, then check out together.
 
-[中文说明](README.md) · **Version 1.0.3** · [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991) · [Manual download](https://github.com/linglingpp2/sts2-shopping-cart/releases/latest) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/linglingpp2/sts2-shopping-cart/issues)
+[中文说明](README.md) · **Version 1.0.4** · [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991) · [Manual download](https://github.com/linglingpp2/sts2-shopping-cart/releases/latest) · [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/linglingpp2/sts2-shopping-cart/issues)
 
 ## Features and controls
 
@@ -20,11 +20,11 @@ Costs are estimates. Membership Card discounts and some base-game relic price an
 
 ## Installation and updates
 
-Subscribe on [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991), wait for Steam to finish downloading, then restart the game. The current Workshop release targets the game's `public-beta` branch.
+Subscribe on [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991), wait for Steam to finish downloading, then restart the game. The current release supports both stable `public` and `public-beta`.
 
 For a manual installation:
 
-1. Download and extract `ShoppingCart-1.0.3.zip`.
+1. Download and extract `ShoppingCart-1.0.4.zip`.
 2. Exit the game, then copy the package's entire `ShoppingCart` folder into the game's `mods` folder. Overwrite the matching files when updating.
 3. Start the game and open a shop's inventory to use the panel. Restart the game after replacing the DLL.
 
@@ -40,9 +40,9 @@ When testing the subscription version, first move the manual installation with t
 
 ## Compatibility and validation
 
-- Built and validated on **Windows with game version 0.111.0 on `public-beta`**. The manifest's minimum game version is 0.111.0, and the Workshop branch range is `public-beta` through `public-beta`.
-- The DLL actually downloaded from Steam for this release passed 50 isolated regression checks covering purchase order, Membership Card discounts, refunds, card-removal confirmation and cancellation, failed purchases, concurrent requests, exception recovery, and closing the shop. These checks use real game assemblies but replace UI and some synchronization boundaries, so they do not prove actual gameplay behavior.
-- The downloaded DLL's panel also passed an independent engine UI fixture check. Full gameplay, physical controller devices, and multiplayer still need testing. Other operating systems, branches, and game versions have not been verified.
+- Windows: **stable `public` v0.107.1 (build 23811903)** and **`public-beta` v0.113.0 (build 26625880)**, checked on 2026-11-13. The minimum game version is 0.107.1. One DLL selects the appropriate native purchase API at runtime.
+- The same release DLL passed **51/51 stable** and **56/56 beta** checks covering checkout order, Membership Card discounts, refunds, removal confirmation/cancellation, concurrency, recovery, and production Harmony patch resolution. Beta checks also execute the native `MerchantSynchronizer` purchase, message dispatch and inventory lock; UI and transport boundaries are replaced.
+- Separate engine UI fixtures passed on both versions, covering the panel, icon, scrolling, collapse, position recovery and cleanup. Full gameplay, physical controllers, real multiplayer peers, other operating systems and other versions remain unverified. See [1.0.4 compatibility validation](docs/COMPATIBILITY-1.0.4.md).
 
 Game updates may change the internal purchase or UI interfaces. Include your game version, mod version, other enabled mods, reproduction steps, and relevant logs when [reporting an issue](https://github.com/linglingpp2/sts2-shopping-cart/issues).
 

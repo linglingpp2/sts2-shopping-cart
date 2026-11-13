@@ -1,5 +1,14 @@
 # 更新记录 / Changelog
 
+## 1.0.4
+
+- 修复 v0.113.0 移除商店槽位 `OnTryPurchase` 后导致 mod 初始化失败的问题；改为拦截两版都存在的 `NMerchantSlot.OnSelected`。
+- 自动选择稳定版的购买封装或测试版 `MerchantSynchronizer.PurchaseLocalEntry`，保留原生网络消息、购买锁和删牌取消流程；不直接调用未同步购买接口。
+- 同时支持 Windows 稳定版 v0.107.1 与测试版 v0.113.0，最低游戏版本调整为 0.107.1；对局结束后停止结算。
+- 同一个 DLL 通过稳定版 51 项、测试版 56 项检查，以及两版引擎界面验证。
+
+See [release notes](docs/RELEASE_NOTES-1.0.4.md) and [validation scope](docs/COMPATIBILITY-1.0.4.md).
+
 ## 1.0.3
 
 - 删牌服务可加入和移出购物车，并显示选中角标。

@@ -12,7 +12,7 @@ namespace ShoppingCart;
 /// 把商店槽位的点击购买改为“加入/移出购物车”。
 /// 卡牌、遗物、药水及删牌服务共用加入/移出逻辑。
 /// </summary>
-[HarmonyPatch]
+[HarmonyPatch(typeof(NMerchantSlot), "OnSelected")]
 public static class SlotClickPatches
 {
     private static readonly FieldInfo RugField = AccessTools.Field(typeof(NMerchantSlot), "_merchantRug");
@@ -61,21 +61,10 @@ public static class SlotClickPatches
         return false;
     }
 
-    [HarmonyPatch(typeof(NMerchantCard), "OnTryPurchase")]
     [HarmonyPrefix]
-    public static bool CardPrefix(NMerchantCard __instance, ref Task __result) => HandleClick(__instance, ref __result);
-
-    [HarmonyPatch(typeof(NMerchantRelic), "OnTryPurchase")]
-    [HarmonyPrefix]
-    public static bool RelicPrefix(NMerchantRelic __instance, ref Task __result) => HandleClick(__instance, ref __result);
-
-    [HarmonyPatch(typeof(NMerchantPotion), "OnTryPurchase")]
-    [HarmonyPrefix]
-    public static bool PotionPrefix(NMerchantPotion __instance, ref Task __result) => HandleClick(__instance, ref __result);
-
-    [HarmonyPatch(typeof(NMerchantCardRemoval), "OnTryPurchase")]
-    [HarmonyPrefix]
-    public static bool RemovalPrefix(NMerchantCardRemoval __instance, ref Task __result) => HandleClick(__instance, ref __result);
+    public static bool Prefix(NMerchantSlot __instance, ref Task __result) =>
+        __instance is not (NMerchantCard or NMerchantRelic or NMerchantPotion or NMerchantCardRemoval)
+        || HandleClick(__instance, ref __result);
 }
 
 /// <summary>Also prevent a cart checkout from overlapping an in-progress direct purchase or removal.</summary>

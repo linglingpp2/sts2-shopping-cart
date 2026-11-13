@@ -7,6 +7,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace ShoppingCart;
 
@@ -157,7 +158,8 @@ public class CartState
     /// <summary>一键结算：逐件走原版购买管线，失败即停（原版的失败提示/抖动会自动触发）。</summary>
     public async Task CheckoutAsync()
     {
-        if (IsCheckingOut || _entries.Count == 0 || !CheckoutInputGuard.IsUsable(Rug) || CheckoutBlockedByTravelOrVote)
+        if (IsCheckingOut || _entries.Count == 0 || !CheckoutInputGuard.IsUsable(Rug)
+            || !RunManager.Instance.IsInProgress || CheckoutBlockedByTravelOrVote)
         {
             return;
         }
@@ -174,7 +176,8 @@ public class CartState
             RefreshPanel();
             foreach (var entry in plan.Entries)
             {
-                if (_clearVersion != clearVersion || !CheckoutInputGuard.IsUsable(Rug) || CheckoutBlockedByTravelOrVote
+                if (_clearVersion != clearVersion || !CheckoutInputGuard.IsUsable(Rug)
+                    || !RunManager.Instance.IsInProgress || CheckoutBlockedByTravelOrVote
                     || !ReferenceEquals(Rug.Inventory, inventory))
                 {
                     break;
@@ -188,10 +191,9 @@ public class CartState
                     Remove(entry);
                     continue;
                 }
-                // Removal has its own wrapper: it opens the original cancelable selection/sync flow.
-                bool ok = entry is MerchantCardRemovalEntry removal
-                    ? await removal.OnTryPurchaseWrapper(inventory, ignoreCost: false, cancelable: true)
-                    : await entry.OnTryPurchaseWrapper(inventory);
+                // Newer games synchronize every entry through MerchantSynchronizer;
+                // stable games retain the separate cancelable card-removal wrapper.
+                bool ok = await MerchantPurchase.PurchaseAsync(entry, inventory);
                 if (!ok)
                 {
                     Log.Info($"[{Mod.Id}] checkout stopped at {entry.GetType().Name}");

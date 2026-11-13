@@ -55,8 +55,17 @@ Cancelled card removal stops checkout; earlier purchases are not refunded.
 已选且当前金币足够购买的会员卡优先购买；取消删牌会停止后续结算。
 
 Compatibility / 兼容性
-Windows, Slay the Spire 2 0.111.0. Multiplayer and other platforms unverified.
-测试环境：Windows、游戏 0.111.0；多人联机和其他平台尚未实测。
+Windows: stable/public 0.107.1 and public-beta 0.113.0 use the same DLL.
+Validated: 51 stable checks, 56 beta checks, and engine UI fixtures on both.
+测试环境：Windows；稳定版 0.107.1 和测试版 0.113.0 使用同一 DLL。
+稳定版 51 项、测试版 56 项回归及两版引擎界面检查通过。
+Full gameplay, physical controllers, multiplayer peers and other platforms unverified.
+完整游玩、真实手柄、真实多人联机及其他平台尚未实测。
+
+Steam Workshop / 创意工坊
+https://steamcommunity.com/sharedfiles/filedetails/?id=3812514991
+Keep either the Workshop or manual copy; move duplicate same-ID copies outside mods.
+订阅版与手动版保留一种；同 ID 的重复手动版请移出 mods 目录。
 
 Source and support / 源码与反馈
 https://github.com/linglingpp2/sts2-shopping-cart

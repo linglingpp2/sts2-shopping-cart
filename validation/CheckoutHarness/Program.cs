@@ -13,10 +13,11 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Commands;
 
 // Isolated process: the real CartState / MerchantEntry checkout pipeline runs with
 // UI methods suppressed. Membership-order cases also replace native relic obtain
-// commands, while using the real MembershipCard price hook and purchase wrapper.
+// commands, while using the real MembershipCard price hook and purchase validation.
 // No Godot engine, running game, or save is touched.
 var gameDataDir = Environment.GetEnvironmentVariable("STS2_GAME_DATA_DIR")
     ?? Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>()
@@ -35,6 +36,7 @@ foreach (var method in new[]
 {
     AccessTools.Method(typeof(CartState), "SetBadge"),
     AccessTools.Method(typeof(Log), nameof(Log.Info)),
+    AccessTools.Method(typeof(Log), nameof(Log.Debug)),
     AccessTools.Method(typeof(Log), nameof(Log.Error))
 }) harmony.Patch(method, prefix: skip);
 var guardType = typeof(CartState).Assembly.GetType("ShoppingCart.CheckoutInputGuard");
@@ -58,15 +60,35 @@ harmony.Patch(AccessTools.PropertyGetter(typeof(NullRunState), nameof(NullRunSta
     prefix: new HarmonyMethod(typeof(MerchantStub).GetMethod(nameof(MerchantStub.CurrentRoom))!));
 harmony.Patch(AccessTools.Method(typeof(NullRunState), nameof(NullRunState.IterateHookListeners)),
     prefix: new HarmonyMethod(typeof(MerchantStub).GetMethod(nameof(MerchantStub.HookListeners))!));
-harmony.Patch(AccessTools.Method(typeof(MerchantRelicEntry), "OnTryPurchase"),
+harmony.Patch(AccessTools.Method(typeof(MerchantRelicEntry),
+        MerchantPurchase.UsesMerchantSynchronizer ? "OnTryPurchaseInternal" : "OnTryPurchase"),
     prefix: new HarmonyMethod(typeof(MerchantStub).GetMethod(nameof(MerchantStub.PurchaseRelic))!));
 harmony.Patch(AccessTools.PropertyGetter(typeof(RunManager), nameof(RunManager.IsInProgress)),
     prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.IsRunInProgress))!));
-harmony.Patch(AccessTools.Method(typeof(MerchantCardRemovalEntry), nameof(MerchantCardRemovalEntry.OnTryPurchaseWrapper),
-        new[] { typeof(MerchantInventory), typeof(bool), typeof(bool) }),
-    prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.ObserveTypedWrapper))!));
-harmony.Patch(AccessTools.Method(typeof(OneOffSynchronizer), nameof(OneOffSynchronizer.DoLocalMerchantCardRemoval)),
-    prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.SelectAndRemove))!));
+if (MerchantPurchase.UsesMerchantSynchronizer)
+{
+#if MERCHANT_SYNC_V2
+    harmony.Patch(AccessTools.PropertyGetter(typeof(RunManager), "MerchantSynchronizer"),
+        prefix: new HarmonyMethod(typeof(SyncStub).GetMethod(nameof(SyncStub.GetSynchronizer))!));
+    harmony.Patch(AccessTools.Method(typeof(MerchantSynchronizer), "PurchaseLocalEntry"),
+        prefix: new HarmonyMethod(typeof(SyncStub).GetMethod(nameof(SyncStub.Purchase))!));
+    SyncStub.PatchBoundaries(harmony);
+    harmony.Patch(AccessTools.Method(typeof(MerchantEntry), "OnTryPurchaseUnsynchronized"),
+        prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.ObserveEntry))!));
+    harmony.Patch(AccessTools.Method(typeof(MerchantCardRemovalEntry), "DoCardRemoval"),
+        prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.SelectModern))!));
+    harmony.Patch(AccessTools.Method(typeof(PlayerCmd), nameof(PlayerCmd.LoseGold)),
+        prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.LoseGold))!));
+#endif
+}
+else
+{
+    harmony.Patch(AccessTools.Method(typeof(MerchantCardRemovalEntry), "OnTryPurchaseWrapper",
+            new[] { typeof(MerchantInventory), typeof(bool), typeof(bool) }),
+        prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.ObserveTypedWrapper))!));
+    harmony.Patch(AccessTools.Method(typeof(OneOffSynchronizer), "DoLocalMerchantCardRemoval"),
+        prefix: new HarmonyMethod(typeof(RemovalStub).GetMethod(nameof(RemovalStub.SelectAndRemove))!));
+}
 harmony.Patch(AccessTools.PropertyGetter(typeof(Loc), nameof(Loc.Chinese)),
     prefix: new HarmonyMethod(typeof(UiStub).GetMethod(nameof(UiStub.IsChinese))!));
 
@@ -147,10 +169,10 @@ await Check("busy card prefix blocks original purchase", async () =>
     var slot = (NMerchantCard)RuntimeHelpers.GetUninitializedObject(typeof(NMerchantCard));
     AccessTools.Field(typeof(NMerchantSlot), "_merchantRug").SetValue(slot, cart.Rug);
     Task result = null!;
-    var allowsOriginal = SlotClickPatches.CardPrefix(slot, ref result);
+    var allowsOriginal = SlotClickPatches.Prefix(slot, ref result);
     CartState.CartModeEnabled = false;
     Task directResult = null!;
-    var allowsDirectOriginal = SlotClickPatches.CardPrefix(slot, ref directResult);
+    var allowsDirectOriginal = SlotClickPatches.Prefix(slot, ref directResult);
     CartState.CartModeEnabled = true;
     gate.SetResult();
     await first;
@@ -235,11 +257,11 @@ await Check("a queued item remains selected after a pending direct purchase fail
     try
     {
         Task prefixResult = null!;
-        allowsOriginal = SlotClickPatches.CardPrefix(slot, ref prefixResult);
+        allowsOriginal = SlotClickPatches.Prefix(slot, ref prefixResult);
         queuedAfterClick = cart.Contains(entry);
     }
     finally { CartState.CartModeEnabled = true; }
-    var purchase = entry.OnTryPurchaseWrapper(cart.Rug.Inventory);
+    var purchase = MerchantPurchase.PurchaseAsync(entry, cart.Rug.Inventory);
     Task observed = purchase;
     PendingSelectionPatch.Postfix(slot, ref observed);
     var pending = cart.IsCheckingOut && !observed.IsCompleted && cart.Contains(entry);
@@ -265,11 +287,11 @@ await Check("a queued item is removed only after a direct purchase completes suc
     try
     {
         Task prefixResult = null!;
-        allowsOriginal = SlotClickPatches.CardPrefix(slot, ref prefixResult);
+        allowsOriginal = SlotClickPatches.Prefix(slot, ref prefixResult);
         queuedAfterClick = cart.Contains(entry);
     }
     finally { CartState.CartModeEnabled = true; }
-    var purchase = entry.OnTryPurchaseWrapper(cart.Rug.Inventory);
+    var purchase = MerchantPurchase.PurchaseAsync(entry, cart.Rug.Inventory);
     Task observed = purchase;
     PendingSelectionPatch.Postfix(slot, ref observed);
     var pending = cart.IsCheckingOut && !observed.IsCompleted && cart.Contains(entry);
@@ -488,7 +510,7 @@ await Check("a membership offered in the shop but not selected is never added or
     MerchantStub.Enable();
     var first = new TestEntry(player, 99);
     var unselected = MerchantStub.Membership(player, 100);
-    cart.Rug.Inventory!.AddRelicEntry(unselected);
+    ((List<MerchantRelicEntry>)AccessTools.Field(typeof(MerchantInventory), "_relicEntries").GetValue(cart.Rug.Inventory)!).Add(unselected);
     var last = new TestEntry(player, 101);
     Add(cart, first, last);
     var estimate = cart.Estimate;
@@ -591,11 +613,11 @@ await Check("removal service clicks add once, include its cost, and toggle it ou
     var removal = RemovalStub.Create(player, 75);
     var slot = NewRemovalSlot(cart, removal);
     Task firstResult = null!;
-    bool firstOriginal = SlotClickPatches.RemovalPrefix(slot, ref firstResult);
+    bool firstOriginal = SlotClickPatches.Prefix(slot, ref firstResult);
     bool selectedOnce = cart.Entries.SequenceEqual(new[] { removal }) && cart.TotalCost == 75
         && cart.DisplayNameFor(removal) == Loc.CardRemoval && player.Gold == 200;
     Task secondResult = null!;
-    bool secondOriginal = SlotClickPatches.RemovalPrefix(slot, ref secondResult);
+    bool secondOriginal = SlotClickPatches.Prefix(slot, ref secondResult);
     return Task.FromResult((!firstOriginal && !secondOriginal && firstResult == Task.CompletedTask
         && secondResult == Task.CompletedTask && selectedOnce && cart.Entries.Count == 0
         && RemovalStub.SelectionCalls == 0 && !removal.Used,
@@ -608,7 +630,7 @@ await Check("a used removal service cannot be selected by clicking or adding dir
     removal.SetUsed();
     var slot = NewRemovalSlot(cart, removal);
     Task result = null!;
-    bool original = SlotClickPatches.RemovalPrefix(slot, ref result);
+    bool original = SlotClickPatches.Prefix(slot, ref result);
     cart.Add(removal, slot);
     return Task.FromResult((!original && result == Task.CompletedTask && cart.Entries.Count == 0
         && RemovalStub.SelectionCalls == 0 && player.Gold == 200,
@@ -628,10 +650,10 @@ await Check("direct mode preserves original removal and retains the queued servi
     try
     {
         Task prefixResult = null!;
-        allowsOriginal = SlotClickPatches.RemovalPrefix(slot, ref prefixResult);
+        allowsOriginal = SlotClickPatches.Prefix(slot, ref prefixResult);
     }
     finally { CartState.CartModeEnabled = true; }
-    var purchase = removal.OnTryPurchaseWrapper(cart.Rug.Inventory, false, true);
+    var purchase = MerchantPurchase.PurchaseAsync(removal, cart.Rug.Inventory);
     Task observed = purchase;
     PendingSelectionPatch.Postfix(slot, ref observed);
     bool pending = cart.IsCheckingOut && cart.Contains(removal) && !observed.IsCompleted;
@@ -652,11 +674,11 @@ await Check("a busy checkout blocks removal clicks in both shopping modes", asyn
     var checkout = cart.CheckoutAsync();
     var slot = NewRemovalSlot(cart, removal);
     Task cartResult = null!;
-    bool cartOriginal = SlotClickPatches.RemovalPrefix(slot, ref cartResult);
+    bool cartOriginal = SlotClickPatches.Prefix(slot, ref cartResult);
     CartState.CartModeEnabled = false;
     bool directOriginal;
     Task directResult = null!;
-    try { directOriginal = SlotClickPatches.RemovalPrefix(slot, ref directResult); }
+    try { directOriginal = SlotClickPatches.Prefix(slot, ref directResult); }
     finally { CartState.CartModeEnabled = true; }
     bool selectedWhileBusy = cart.Contains(removal) && RemovalStub.SelectionCalls == 0;
     gate.SetResult();
@@ -765,7 +787,7 @@ await Check("a removal service never receives the card-purchase LuckyFysh refund
         && player.Gold == 125 && removal.Used && cart.Entries.Count == 0,
         $"estimated total={estimate.TotalCost}; estimated remaining={estimate.RemainingGold}; actual gold={player.Gold}");
 });
-await Check("removal uses the native in-progress validation before any charge or later purchase", async () =>
+await Check("checkout rejects removal outside an active run before any charge or later purchase", async () =>
 {
     var (cart, player) = NewCart(200);
     var removal = RemovalStub.Create(player, 75);
@@ -773,7 +795,7 @@ await Check("removal uses the native in-progress validation before any charge or
     Add(cart, removal, later);
     RemovalStub.RunInProgress = false;
     await cart.CheckoutAsync();
-    return (RemovalStub.TypedWrapperCalls == 1 && RemovalStub.SelectionCalls == 0 && player.Gold == 200
+    return (RemovalStub.TypedWrapperCalls == 0 && RemovalStub.SelectionCalls == 0 && player.Gold == 200
         && later.Buys == 0 && !removal.Used && cart.Entries.Count == 2 && !cart.IsCheckingOut,
         $"typed wrapper={RemovalStub.TypedWrapperCalls}; selection calls={RemovalStub.SelectionCalls}; gold={player.Gold}; later buys={later.Buys}");
 });
@@ -817,6 +839,88 @@ await Check("restoring a travel switch preserves an already started journey", ()
         "an old enabled state does not overwrite the travel lock; normal restoration remains available"));
 });
 
+#if MERCHANT_SYNC_V2
+await Check("new merchant API sends each selected purchase through the native synchronizer", async () =>
+{
+    var (cart, player) = NewCart(100);
+    var first = new TestEntry(player, 30);
+    var second = new TestEntry(player, 40);
+    Add(cart, first, second);
+    SyncStub.UseNative(player, cart.Rug.Inventory!, first, second);
+    await cart.CheckoutAsync();
+    return (player.Gold == 30 && first.Buys == 1 && second.Buys == 1 && cart.Entries.Count == 0
+        && SyncStub.Messages.SequenceEqual(new[] { first.Id!.Value, second.Id!.Value }) && SyncStub.Calls == 2,
+        $"native messages={string.Join(',', SyncStub.Messages)}; calls={SyncStub.Calls}; gold={player.Gold}");
+});
+await Check("native inventory lock rejects overlapping purchases without sending another message", async () =>
+{
+    var (cart, player) = NewCart(100);
+    var item = new TestEntry(player, 30);
+    Add(cart, item);
+    var inventory = cart.Rug.Inventory!;
+    SyncStub.UseNative(player, inventory, item);
+    inventory.TryBeginPurchase();
+    await cart.CheckoutAsync();
+    bool preserved = item.Buys == 0 && player.Gold == 100 && cart.Contains(item) && SyncStub.Messages.Count == 0;
+    inventory.EndPurchase();
+    await cart.CheckoutAsync();
+    return (preserved && item.Buys == 1 && player.Gold == 70 && SyncStub.Messages.Count == 1,
+        $"blocked purchase preserved={preserved}; buys after unlock={item.Buys}; messages={SyncStub.Messages.Count}");
+});
+await Check("native synchronized removal cancellation sends no later purchase and releases its lock", async () =>
+{
+    var (cart, player) = NewCart(200);
+    var removal = RemovalStub.Create(player, 75);
+    var later = new TestEntry(player, 40);
+    Add(cart, removal, later);
+    SyncStub.UseNative(player, cart.Rug.Inventory!, removal, later);
+    RemovalStub.Succeeds = false;
+    await cart.CheckoutAsync();
+    bool unlocked = cart.Rug.Inventory!.TryBeginPurchase();
+    cart.Rug.Inventory.EndPurchase();
+    return (unlocked && player.Gold == 200 && !removal.Used && later.Buys == 0
+        && RemovalStub.LastCancelable && cart.Entries.Count == 2
+        && SyncStub.Messages.SequenceEqual(new[] { removal.Id!.Value }),
+        $"lock released={unlocked}; messages={SyncStub.Messages.Count}; cancelable={RemovalStub.LastCancelable}; gold={player.Gold}");
+});
+await Check("native synchronizer releases its inventory lock when a purchase throws", async () =>
+{
+    var (cart, player) = NewCart(100);
+    var item = new TestEntry(player, 30) { BeforeBuy = () => throw new InvalidOperationException("purchase failure") };
+    var later = new TestEntry(player, 10);
+    Add(cart, item, later);
+    SyncStub.UseNative(player, cart.Rug.Inventory!, item, later);
+    await cart.CheckoutAsync();
+    bool unlocked = cart.Rug.Inventory!.TryBeginPurchase();
+    cart.Rug.Inventory.EndPurchase();
+    return (unlocked && !cart.IsCheckingOut && cart.Entries.Count == 2 && player.Gold == 100
+        && later.Buys == 0 && SyncStub.Messages.Count == 1,
+        $"lock released={unlocked}; cart busy={cart.IsCheckingOut}; messages={SyncStub.Messages.Count}");
+});
+await Check("missing new synchronizer fails without an unsynchronized purchase", async () =>
+{
+    var (cart, player) = NewCart(100);
+    var item = new TestEntry(player, 30);
+    Add(cart, item);
+    SyncStub.UseOriginal = true;
+    SyncStub.Original = null;
+    await cart.CheckoutAsync();
+    return (item.Buys == 0 && player.Gold == 100 && cart.Contains(item) && !cart.IsCheckingOut,
+        $"buys={item.Buys}; gold={player.Gold}; retained={cart.Contains(item)}");
+});
+#endif
+await Check("all production Harmony patches resolve against this game version", () =>
+{
+    var production = new Harmony("shopping-cart.production-patch-validation");
+    try
+    {
+        production.PatchAll(typeof(CartState).Assembly);
+        return Task.FromResult((production.GetPatchedMethods().Count() >= 5,
+            $"patched methods={production.GetPatchedMethods().Count()}; new purchase API={MerchantPurchase.UsesMerchantSynchronizer}"));
+    }
+    finally { production.UnpatchAll(production.Id); }
+});
+Console.WriteLine($"Checks: {results.Count(result => result.Item2)}/{results.Count} passed");
 foreach (var (name, passed, detail) in results)
     Console.WriteLine($"{(passed ? "PASS" : "FAIL")} {name}: {detail}");
 Environment.ExitCode = results.Any(x => !x.Item2) ? 1 : 0;
@@ -829,7 +933,13 @@ async Task Check(string name, Func<Task<(bool, string)>> test)
         results.Add((name, passed, detail));
     }
     catch (Exception ex) { results.Add((name, false, ex.ToString())); }
-    finally { MerchantStub.Reset(); RemovalStub.Reset(); }
+    finally
+    {
+        MerchantStub.Reset(); RemovalStub.Reset();
+#if MERCHANT_SYNC_V2
+        SyncStub.Reset();
+#endif
+    }
 }
 
 static (CartState, Player) NewCart(int gold)
@@ -848,6 +958,11 @@ static (CartState, Player) NewCart(int gold)
     player.Gold = gold;
     var rug = (NMerchantInventory)RuntimeHelpers.GetUninitializedObject(typeof(NMerchantInventory));
     AccessTools.Property(typeof(NMerchantInventory), nameof(NMerchantInventory.Inventory))!.SetValue(rug, new MerchantInventory(player));
+#if MERCHANT_SYNC_V2
+    SyncStub.Inventory = rug.Inventory;
+    SyncStub.Calls = 0;
+    SyncStub.Reset();
+#endif
     return (CartState.For(rug), player);
 }
 
@@ -952,7 +1067,9 @@ public static class RemovalStub
     public static bool LastCancelable;
     private static Player? _player;
     private static MerchantCardRemovalEntry? _entry;
+#if !MERCHANT_SYNC_V2
     private static OneOffSynchronizer? _previousSynchronizer;
+#endif
 
     public static MerchantCardRemovalEntry Create(Player player, int cost)
     {
@@ -961,17 +1078,22 @@ public static class RemovalStub
         _entry = (MerchantCardRemovalEntry)RuntimeHelpers.GetUninitializedObject(typeof(MerchantCardRemovalEntry));
         AccessTools.Field(typeof(MerchantEntry), "_player").SetValue(_entry, player);
         AccessTools.Field(typeof(MerchantEntry), "_cost").SetValue(_entry, cost);
+        AccessTools.Field(typeof(MerchantCardRemovalEntry), "_isCancelable")?.SetValue(_entry, true);
+#if !MERCHANT_SYNC_V2
         _previousSynchronizer = RunManager.Instance.OneOffSynchronizer;
         AccessTools.Property(typeof(RunManager), nameof(RunManager.OneOffSynchronizer))!.SetValue(
             RunManager.Instance, RuntimeHelpers.GetUninitializedObject(typeof(OneOffSynchronizer)));
+#endif
         return _entry;
     }
 
     public static void Reset()
     {
+#if !MERCHANT_SYNC_V2
         if (Enabled)
             AccessTools.Property(typeof(RunManager), nameof(RunManager.OneOffSynchronizer))!.SetValue(
                 RunManager.Instance, _previousSynchronizer);
+#endif
         Enabled = false;
         RunInProgress = Succeeds = true;
         TypedWrapperCalls = SelectionCalls = LastGoldCost = 0;
@@ -979,17 +1101,48 @@ public static class RemovalStub
         WaitForSelection = null;
         _player = null;
         _entry = null;
+#if !MERCHANT_SYNC_V2
         _previousSynchronizer = null;
+#endif
     }
 
     public static bool IsRunInProgress(ref bool __result)
     {
-        if (!Enabled) return true;
         __result = RunInProgress;
         return false;
     }
 
     public static void ObserveTypedWrapper() { if (Enabled) TypedWrapperCalls++; }
+
+    public static void ObserveEntry(MerchantEntry __instance)
+    {
+        if (Enabled && __instance is MerchantCardRemovalEntry) TypedWrapperCalls++;
+    }
+
+    public static bool SelectModern(bool isCancelable, ref Task<bool> __result)
+    {
+        if (!Enabled) return true;
+        SelectionCalls++;
+        LastGoldCost = _entry!.Cost;
+        LastCancelable = isCancelable;
+        __result = SelectModernAsync();
+        return false;
+    }
+
+    private static async Task<bool> SelectModernAsync()
+    {
+        if (WaitForSelection != null) await WaitForSelection();
+        return Succeeds;
+    }
+
+    public static bool LoseGold(decimal amount, Player player, ref Task __result)
+    {
+        if (!Enabled || !ReferenceEquals(player, _player)) return true;
+        player.Gold -= (int)amount;
+        if (MerchantStub.Enabled) MerchantStub.Purchases.Add((_entry!, (int)amount));
+        __result = Task.CompletedTask;
+        return false;
+    }
 
     public static bool SelectAndRemove(int goldCost, bool cancelable, ref Task<bool> __result)
     {
@@ -1031,7 +1184,11 @@ public sealed class TestEntry : MerchantEntry
     public Func<Task>? BeforeBuyAsync { get; init; }
     public override bool IsStocked => Stocked;
     public override void CalcCost() => _cost = _baseCost;
+#if MERCHANT_SYNC_V2
+    protected override async Task<(bool, int)> OnTryPurchaseInternal(MerchantInventory? inventory, bool ignoreCost)
+#else
     protected override async Task<(bool, int)> OnTryPurchase(MerchantInventory? inventory, bool ignoreCost)
+#endif
     {
         BeforeBuy?.Invoke();
         if (BeforeBuyAsync != null) await BeforeBuyAsync();

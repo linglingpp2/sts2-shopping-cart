@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CartDll Condition="'$(CartDll)' == ''">../../ShoppingCartMod/bin/Release/ShoppingCart.dll</CartDll>
+    <GameUsesMerchantSynchronizer Condition="Exists('$(GameDataDir)/sts2.dll')">$([System.IO.File]::ReadAllText('$(GameDataDir)/sts2.dll').Contains('OnTryPurchaseUnsynchronized'))</GameUsesMerchantSynchronizer>
+    <DefineConstants Condition="'$(GameUsesMerchantSynchronizer)' == 'True'">$(DefineConstants);MERCHANT_SYNC_V2</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="sts2"><HintPath>$(GameDataDir)/sts2.dll</HintPath></Reference>
